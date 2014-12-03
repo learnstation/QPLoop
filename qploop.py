@@ -480,8 +480,11 @@ class Signal(object):
                 eventLoop._event_queue.remove(event)
 
         if cref._ob is not None and cref._ob():
-            if isinstance(cref._ob(), QPObject) and cref._ob().isSupportEventLoop():
-                eventLoop = cref._ob().thread.eventLoop
+            if isinstance(cref._ob(), QPObject):
+                if isinstance(cref._ob().thread, EventThread):
+                    eventLoop = cref._ob().thread.eventLoop
+                else:
+                    eventLoop = QPLoop.instance()
                 removeEvents()
             else:
                 raise RuntimeError("%s must be an QPObject and the it should  belongs to thread which upport EventLoop" % func._ob())
@@ -509,8 +512,11 @@ class Signal(object):
             else:
                 event = Event(func, *args, **kwargs)
                 if func._ob is not None and func._ob():
-                    if isinstance(func._ob(), QPObject) and func._ob().isSupportEventLoop():
-                        eventLoop = func._ob().thread.eventLoop
+                    if isinstance(func._ob(), QPObject):
+                        if isinstance(func._ob().thread, EventThread):
+                            eventLoop = func._ob().thread.eventLoop
+                        else:
+                            eventLoop = QPLoop.instance()
                         eventLoop.post_event(event)
                     else:
                         raise RuntimeError("%s must be an QPObject and the it should  belongs to thread which upport EventLoop" % func._ob())
@@ -743,7 +749,7 @@ class Timer(Signal):
         """
         
         # Emit signal
-        self.emit()
+        self.emit_now()
         #print('timer timeout', self.oneshot)
         # Do we need to stop it now, or restart it
         if self.oneshot:
@@ -786,9 +792,19 @@ class QPLoop(object):
 
     @classmethod
     def instance(cls):
+        '''
+            The global instance shoud be an  singleton lived in MainThread.
+        '''
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance
+
+    @classmethod
+    def isMainLoopSupported(cls):
+        if cls._instance is None:
+            return False
+        else:
+            return True
 
     @classmethod
     def isMainLoopStarted(cls):
@@ -945,13 +961,16 @@ class QPLoop(object):
         self._embedding_callback2 = callback
 
 
+globalLoop = QPLoop.instance()
+
 class EventThread(threading.Thread):
 
-    """docstring for EventThread"""
+    """Each eventThread has an evntloop and start when initialized"""
 
     def __init__(self, *arg, **kwargs):
         super(EventThread, self).__init__()
         self._eventLoop = QPLoop()
+        self.start()
 
     def run(self):
         self.exec_()
@@ -965,6 +984,9 @@ class EventThread(threading.Thread):
 
 
 class QPObject(object):
+    '''
+        Basic object of eventloop 
+    '''
 
     def __init__(self, *args, **kwargs):
         super(QPObject, self).__init__()
@@ -975,20 +997,18 @@ class QPObject(object):
         return self._thread
 
     def moveToThread(self, thread):
-        flag_thread = isinstance(thread, EventThread)
-        flag_loop = hasattr(thread, 'eventLoop')
-        if flag_thread and flag_loop:
-            self._thread = thread
-            return True
-        elif flag_thread and not flag_loop:
-            raise RuntimeError('%s must has an eventLoop.' %repr(thread))
+        if isinstance(thread, threading.Thread):
+            if threading.current_thread().name == 'MainThread':
+                pass
+            else:
+                flag_thread = isinstance(thread, EventThread)
+                flag_loop = hasattr(thread, 'eventLoop')
+                if flag_thread and flag_loop:
+                    self._thread = thread
+                    return True
+                elif flag_thread and not flag_loop:
+                    raise RuntimeError('%s must has an eventLoop.' %repr(thread))
+                else:
+                    raise RuntimeError('%s must be an EventThread.' % repr(thread))
         else:
-            raise RuntimeError('%s must be an EventThread.' % repr(thread))
-
-    def isSupportEventLoop(self):
-        flag_thread = isinstance(self._thread, EventThread)
-        flag_loop = hasattr(self._thread, 'eventLoop')
-        if flag_thread and flag_loop:
-            return True
-        else:
-            return False
+            raise RuntimeError('%s must be an thread object.' % repr(thread))
