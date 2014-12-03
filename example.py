@@ -12,11 +12,12 @@ class Worker(qploop.QPObject):
 		self.s1.connect(self.funcA)
 		self.s1.connect(self.funcB)
 		self.s1.connect(self.funcD)
+		self.s1.connect(self.funcC)
 	
 	def funcA(self, *args, **kwargs):
 		print(threading.current_thread())
 		print('funcA', args, kwargs)
-		# self.s1.emit(3, 4, b=5)
+		self.s1.emit(3, 4, b=5)
 
 	def funcB(self, *args, **kwargs):
 		print(threading.current_thread())
@@ -36,6 +37,14 @@ def mainfuncA(*args, **kwargs):
 	print(threading.current_thread())
 	print('mainfuncA', args, kwargs)
 
+def mainfuncB(*args, **kwargs):
+	print(threading.current_thread())
+	print('mainfuncB', args, kwargs)
+
+def mainfuncC(*args, **kwargs):
+	print(threading.current_thread())
+	print('mainfuncC', args, kwargs)
+
 
 if __name__ == '__main__':
 	thread1 = qploop.EventThread()
@@ -51,7 +60,13 @@ if __name__ == '__main__':
 	w2.moveToThread(thread2)
 
 	s1 = qploop.Signal()
-	s1.connect(w1.funcA)
+	s1.connect(mainfuncA)
+	s1.connect(mainfuncB)
+	s1.connect(mainfuncC)
+	s1.emit_now(1, 2)
+	time.sleep(3)
+	s1.disconnect()
+	s1.emit(1, 2)
 
 	s2 = qploop.Signal()
 	s2.connect(w2.funcC)
@@ -60,5 +75,7 @@ if __name__ == '__main__':
 	s2.emit(3, 4)
 
 	t = qploop.Timer(2)
-	t.connect(w1.funcA)
+	t.connect(mainfuncA)
 	t.start()
+
+	qploop.QPLoop.instance().start()

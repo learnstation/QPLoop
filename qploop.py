@@ -451,8 +451,8 @@ class Signal(object):
     def disconnect(self, func=None):
         """ disconnect(func=None)
         
-        Unsubscribe a handler, If func is None, remove all handlers.  
-        
+        Unsubscribe a handler and remove event of func, If func is None, remove all handlers and remove all event from _event_queue
+
         """
         if func is None:
             for c  in self._handlers[:]:
@@ -468,20 +468,30 @@ class Signal(object):
             self.removeEventFromQueue(cref)
 
     def removeEventFromQueue(self, cref):
-        if hasattr(cref, '_ob') and cref._ob():
+        '''
+            remove event of cref from _event_queue
+        '''
+        def removeEvents():
+            removeEvents = []
+            for event in eventLoop._event_queue._q:
+                if event._callable.compare(cref) or event._callable.isdead():
+                    removeEvents.append(event)
+            for event in removeEvents:
+                eventLoop._event_queue.remove(event)
+
+        if cref._ob is not None and cref._ob():
             if isinstance(cref._ob(), QPObject) and cref._ob().isSupportEventLoop():
                 eventLoop = cref._ob().thread.eventLoop
-                removeEvents = []
-                for event in eventLoop._event_queue._q:
-                    if event._callable.compare(cref) or event._callable.isdead():
-                        removeEvents.append(event)
-                for event in removeEvents:
-                    eventLoop._event_queue.remove(event)
+                removeEvents()
             else:
                 raise RuntimeError("%s must be an QPObject and the it should  belongs to thread which upport EventLoop" % func._ob())
         else:
-            raise RuntimeError("%s must be an QPObject and the it should  belongs to thread which upport EventLoop" % func._ob())
-    
+            try:
+                eventLoop = QPLoop.instance()
+                removeEvents()
+            except:
+                raise RuntimeError("%s must be an QPObject and the it should  belongs to thread which upport EventLoop" % func._ob())
+
     def emit(self, *args, **kwargs):
         """ emit(*args, **kwargs)
         
@@ -498,14 +508,18 @@ class Signal(object):
                 toremove.append(func)
             else:
                 event = Event(func, *args, **kwargs)
-                if hasattr(func, '_ob') and func._ob():
+                if func._ob is not None and func._ob():
                     if isinstance(func._ob(), QPObject) and func._ob().isSupportEventLoop():
                         eventLoop = func._ob().thread.eventLoop
                         eventLoop.post_event(event)
                     else:
                         raise RuntimeError("%s must be an QPObject and the it should  belongs to thread which upport EventLoop" % func._ob())
                 else:
-                    raise RuntimeError("%s must be an QPObject and the it should  belongs to thread which upport EventLoop" % func._ob())
+                    try:
+                        eventLoop = QPLoop.instance()
+                        eventLoop.post_event(event)
+                    except:
+                        raise RuntimeError("%s must be an QPObject and the it should  belongs to thread which upport EventLoop" % func._ob())
 
         # Remove dead ones
         for func in toremove:
@@ -748,6 +762,7 @@ class QPLoop(object):
     """ 
         
     """
+    _instance = None
 
     def __init__(self, defaut_event_queue_len=10000, defaut_period_event_t=3.0):
         super(QPLoop, self).__init__()
@@ -768,6 +783,19 @@ class QPLoop(object):
         # To allow other event loops to embed the QPLoop
         self._embedding_callback1 = None # The reference
         self._embedding_callback2 = None # Used in post_event
+
+    @classmethod
+    def instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    @classmethod
+    def isMainLoopStarted(cls):
+        if cls._instance is None:
+            return False
+        else:
+            return cls._instance._in_event_loop
 
     def call_later(self, func, timeout=0.0, *args, **kwargs):
         """ call_later(func, timeout=0.0, *args, **kwargs)
@@ -883,8 +911,10 @@ class QPLoop(object):
         finally:
             # Unset flag
             self._in_event_loop = False
-    
-    
+
+    def start(self):
+        self.start_event_loop()
+
     def stop_event_loop(self):
         """ stop_event_loop()
         
