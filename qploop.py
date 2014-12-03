@@ -438,11 +438,11 @@ class Signal(object):
         # make callable object (checks whether func is callable)
         cnew = CallableObject(func)
         
-        # check -> warn
-        for c in self._handlers:
-            if cnew.compare(c):
-                print("Warning: handler %s already present for %s" %(func, self))
-                return
+        # # check -> warn
+        # for c in self._handlers:
+        #     if cnew.compare(c):
+        #         print("Warning: handler %s already present for %s" %(func, self))
+        #         return
         
         # add the handler
         self._handlers.append(cnew)
@@ -637,7 +637,7 @@ theTimerThread.start()
 
 
 class Timer(Signal):
-    """ Timer(interval=1.0, oneshot=True) 
+    """ Timer(interval=1.0, oneshot=False) 
     
     Timer class. You can coennetc callbacks to the timer. The timer is 
     fired when it runs out of time. 
@@ -651,7 +651,7 @@ class Timer(Signal):
     
     """
     
-    def __init__(self, interval=1.0, oneshot=True):
+    def __init__(self, interval=1.0, oneshot=False):
         Signal.__init__(self)
         
         # store Timer specific properties        
@@ -839,7 +839,7 @@ class QPLoop(object):
         # Calls post_event in due time
     
     
-    def process_events(self, block=False):
+    def process_events(self, block=True):
         """ process_events(block=False)
         
         Process all events currently in the queue. 
@@ -858,8 +858,9 @@ class QPLoop(object):
             while True:
                 event = self._event_queue.pop(block)
                 event.dispatch()
-                block = False # Proceed until there are now more events
+                # block = False # Proceed until there are now more events
         except PackageQueue.Empty:
+            # print("PackageQueue empty")
             pass
     
     
@@ -876,9 +877,9 @@ class QPLoop(object):
         self._in_event_loop = True
         
         try:
-            # Keep blocking for 3 seconds so a keyboardinterrupt still works
+            # block until event comes
             while not self._stop_event_loop:
-                self.process_events(self.defaut_period_event_t)
+                self.process_events(True)
         finally:
             # Unset flag
             self._in_event_loop = False
@@ -944,20 +945,20 @@ class QPObject(object):
         return self._thread
 
     def moveToThread(self, thread):
-        flag1 = isinstance(thread, EventThread)
-        flag2 = hasattr(thread, 'eventLoop')
-        if flag1 and flag2:
+        flag_thread = isinstance(thread, EventThread)
+        flag_loop = hasattr(thread, 'eventLoop')
+        if flag_thread and flag_loop:
             self._thread = thread
             return True
-        elif flag1 and not flag2:
+        elif flag_thread and not flag_loop:
             raise RuntimeError('%s must has an eventLoop.' %repr(thread))
         else:
             raise RuntimeError('%s must be an EventThread.' % repr(thread))
 
     def isSupportEventLoop(self):
-        flag1 = isinstance(self._thread, EventThread)
-        flag2 = hasattr(self._thread, 'eventLoop')
-        if flag1 and flag2:
+        flag_thread = isinstance(self._thread, EventThread)
+        flag_loop = hasattr(self._thread, 'eventLoop')
+        if flag_thread and flag_loop:
             return True
         else:
             return False
