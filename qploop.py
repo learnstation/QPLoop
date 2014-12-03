@@ -749,7 +749,7 @@ class Timer(Signal):
         """
         
         # Emit signal
-        self.emit_now()
+        self.emit()
         #print('timer timeout', self.oneshot)
         # Do we need to stop it now, or restart it
         if self.oneshot:
@@ -960,8 +960,9 @@ class QPLoop(object):
         self._embedding_callback1 = callback
         self._embedding_callback2 = callback
 
-
+# Global instance of QPLoop
 globalLoop = QPLoop.instance()
+
 
 class EventThread(threading.Thread):
 
@@ -994,9 +995,15 @@ class QPObject(object):
 
     @property
     def thread(self):
+        '''
+            return the thread associate with QPObject instance
+        '''
         return self._thread
 
     def moveToThread(self, thread):
+        '''
+            change the thread associate with QPObject instance
+        '''
         if isinstance(thread, threading.Thread):
             if threading.current_thread().name == 'MainThread':
                 pass

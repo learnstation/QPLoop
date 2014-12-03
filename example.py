@@ -42,7 +42,7 @@ def mainfuncA(*args, **kwargs):
 
 def mainfuncB(*args, **kwargs):
 	print(threading.current_thread())
-	print('mainfuncB', args, kwargs)
+	print('mainfuncB', args, kwargs, '-------------')
 
 def mainfuncC(*args, **kwargs):
 	print(threading.current_thread())
@@ -86,7 +86,7 @@ if __name__ == '__main__':
 	t.start()
 
 	t1 = qploop.Timer(1)
-	t1.connect(w1.funcA)
+	t1.connect(mainfuncB)
 	t1.start()
 
 	# t.disconnect()
