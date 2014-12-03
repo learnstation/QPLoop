@@ -455,6 +455,8 @@ class Signal(object):
         
         """
         if func is None:
+            for c  in self._handlers[:]:
+                self.removeEventFromQueue(c)
             self._handlers[:] = []
         else:
             cref = CallableObject(func)
@@ -463,20 +465,22 @@ class Signal(object):
                 if c.compare(cref) or c.isdead():
                     self._handlers.remove(c)
 
-            if hasattr(cref, '_ob') and cref._ob():
-                if isinstance(cref._ob(), QPObject) and cref._ob().isSupportEventLoop():
-                    eventLoop = cref._ob().thread.eventLoop
-                    removeEvents = []
-                    for event in eventLoop._event_queue._q:
-                        if event._callable.compare(cref) or event._callable.isdead():
-                            removeEvents.append(event)
-                    for event in removeEvents:
-                        eventLoop._event_queue.remove(event)
-                else:
-                    raise RuntimeError("%s must be an QPObject and the it should  belongs to thread which upport EventLoop" % func._ob())
+            self.removeEventFromQueue(cref)
+
+    def removeEventFromQueue(self, cref):
+        if hasattr(cref, '_ob') and cref._ob():
+            if isinstance(cref._ob(), QPObject) and cref._ob().isSupportEventLoop():
+                eventLoop = cref._ob().thread.eventLoop
+                removeEvents = []
+                for event in eventLoop._event_queue._q:
+                    if event._callable.compare(cref) or event._callable.isdead():
+                        removeEvents.append(event)
+                for event in removeEvents:
+                    eventLoop._event_queue.remove(event)
             else:
                 raise RuntimeError("%s must be an QPObject and the it should  belongs to thread which upport EventLoop" % func._ob())
-    
+        else:
+            raise RuntimeError("%s must be an QPObject and the it should  belongs to thread which upport EventLoop" % func._ob())
     
     def emit(self, *args, **kwargs):
         """ emit(*args, **kwargs)

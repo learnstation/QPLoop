@@ -9,7 +9,9 @@ class Worker(qploop.QPObject):
 	def __init__(self, *arg, **kwargs):
 		super(Worker, self).__init__()
 		self.s1 = qploop.Signal()
+		# self.s1.connect(self.funcA)
 		self.s1.connect(self.funcB)
+		self.s1.connect(self.funcD)
 	
 	def funcA(self, *args, **kwargs):
 		print(threading.current_thread())
@@ -24,7 +26,7 @@ class Worker(qploop.QPObject):
 		print(threading.current_thread())
 		print('funcC', args, kwargs)
 		self.funcA()
-		self.s1.disconnect(self.funcB)
+		self.s1.disconnect()
 
 	def funcD(self, *args, **kwargs):
 		print('funcD', args, kwargs)
@@ -56,7 +58,7 @@ if __name__ == '__main__':
 
 	s2.emit(3, 4)
 	time.sleep(2)
-	s2.emit(1, 2)
+	# s2.emit(1, 2)
 	# while 1:
 	# 	time.sleep(2)
 	# 	s.emit(1, 2)
