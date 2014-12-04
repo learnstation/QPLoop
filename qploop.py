@@ -432,12 +432,6 @@ class Signal(object):
         # make callable object (checks whether func is callable)
         cnew = CallableObject(func)
         
-        # # check -> warn
-        # for c in self._handlers:
-        #     if cnew.compare(c):
-        #         print("Warning: handler %s already present for %s" %(func, self))
-        #         return
-        
         # add the handler
         self._handlers.append(cnew)
 
