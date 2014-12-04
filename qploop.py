@@ -1005,7 +1005,7 @@ class QPObject(object):
             change the thread associate with QPObject instance
         '''
         if isinstance(thread, threading.Thread):
-            if threading.current_thread().name == 'MainThread':
+            if thread.name == 'MainThread':
                 pass
             else:
                 flag_thread = isinstance(thread, EventThread)
