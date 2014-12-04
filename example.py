@@ -8,32 +8,35 @@ class Worker(qploop.QPObject):
 	"""docstring for Worker"""
 	def __init__(self, *arg, **kwargs):
 		super(Worker, self).__init__()
-		# self.s1 = qploop.Signal()
-		# self.s1.connect(self.funcA)
-		# self.s1.connect(self.funcB)
-		# self.s1.connect(self.funcD)
-		# self.s1.connect(self.funcC)
+		self.workera = WorkerA()
 	
 	def funcA(self, *args, **kwargs):
 		print(threading.current_thread())
-		print('funcA', args, kwargs)
-		# time.sleep(1)
-		# self.s1.emit(3, 4, b=5)
+		print('Worker', 'funcA', args, kwargs)
 
 	def funcB(self, *args, **kwargs):
 		print(threading.current_thread())
-		# time.sleep(1)
-		print('funcB', args, kwargs)
+		print('Worker', 'funcB', args, kwargs)
 
 	def funcC(self, *args, **kwargs):
 		print(threading.current_thread())
-		print('funcC', args, kwargs)
-		# time.sleep(1)
-		# self.funcA()
-		# self.s1.disconnect()
+		print('Worker', 'funcC', args, kwargs)
 
 	def funcD(self, *args, **kwargs):
 		print('funcD', args, kwargs)
+
+
+class WorkerA(qploop.QPObject):
+
+	def __init__(self, *arg, **kwargs):
+		super(WorkerA, self).__init__()
+		self.s = qploop.Signal()
+		self.s.connect(mainfuncA)
+
+	def funcA(self, *args, **kwargs):
+		print(threading.current_thread())
+		print('WorkerA', 'funcD', args, kwargs)
+		self.s.emit("4144444")
 
 
 def mainfuncA(*args, **kwargs):
@@ -52,44 +55,16 @@ def mainfuncC(*args, **kwargs):
 if __name__ == '__main__':
 	thread1 = qploop.EventThread()
 
-	thread2 = qploop.EventThread()
-
 	w1 = Worker()
 	w1.moveToThread(thread1)
-	w2 = Worker()
-	w2.moveToThread(thread2)
-
-	w3 = Worker()
-
-	s1 = qploop.Signal()
-	s1.connect(mainfuncA)
-	s1.connect(mainfuncB)
-	s1.connect(mainfuncC)
-	s1.emit_now(1, 2)
-	time.sleep(3)
-	s1.disconnect()
-	s1.emit(1, 2)
 
 	s2 = qploop.Signal()
 	s2.connect(w1.funcA)
 	s2.connect(w1.funcB)
 	s2.connect(w1.funcC)
 
+	s2.connect(w1.workera.funcA)
+
 	s2.emit(1, 2)
-	s2.emit(3, 4)
-
-	s3 = qploop.Signal()
-	s3.connect(w3.funcA)
-	s3.emit(1,2,3,4,45)
-
-	t = qploop.Timer(2)
-	t.connect(mainfuncA)
-	t.start()
-
-	t1 = qploop.Timer(1)
-	t1.connect(w1.funcA)
-	t1.start()
-
-	t.disconnect()
 
 	qploop.globalLoop.start()

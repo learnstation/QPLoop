@@ -1012,6 +1012,9 @@ class QPObject(object):
                 flag_loop = hasattr(thread, 'eventLoop')
                 if flag_thread and flag_loop:
                     self._thread = thread
+                    for attr, obj in self.__dict__.items():
+                        if isinstance(obj, QPObject):
+                            obj.moveToThread(thread)
                     return True
                 elif flag_thread and not flag_loop:
                     raise RuntimeError('%s must has an eventLoop.' %repr(thread))
