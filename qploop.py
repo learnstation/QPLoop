@@ -389,12 +389,6 @@ class Event(object):
         at initialization.
         """
         self._callable.call(*self._args, **self._kwargs)
-    
-    def _on_timeout(self):
-        """ This is what theTimerThread calls. 
-        """
-        app.post_event(self)
-
 
 
 class Signal(object):
